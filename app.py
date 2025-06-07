@@ -4,26 +4,24 @@ from wifi_tools import connect_to_wifi
 
 
 def load_html(path_to_html_file: str = "index.html") -> str:
-    error_html = """<!DOCTYPE html><html><head><title>failed to load html data</title></head></html>"""
 
     try:
-        with open(path_to_html_file, "r") as file:
-            html_str = file.read()
+        with open(path_to_html_file, "r") as file:            
+            return file.read()
     except:
-        return error_html
-    return html_str
+        raise Exception(f"file:{path_to_html_file} not found")
 
 
 def format_dict(target: str, replacement_dict: dict) -> str:
     for key in replacement_dict.keys():
-        target = target.replace("{" + key + "}", str(replacement_dict[key]))
+        target = target.replace("{{" + key + "}}", str(replacement_dict[key]))
 
     return target
 
 def error_page(cl: socket.socket, message: str = None, stack_trace: dict = None):
 
-    page_str = load_html("error.html")
-
+    page_str = load_html("static/page_404.html")
+    
     if message == None:
         message = "No message"
     if stack_trace == None:
@@ -34,7 +32,7 @@ def error_page(cl: socket.socket, message: str = None, stack_trace: dict = None)
     cl.send(page_str)
 
 
-def favicon(cl: socket.socket, params):
+def __favicon(cl: socket.socket, params):
     try:
         with open("robot_arm.png", "r") as file:
             response = file.read()
@@ -58,7 +56,7 @@ class App:
         self.socket.listen(1)
 
         # we ignore favicon for now
-        self.routes_map = {"/favicon.ico": favicon}
+        self.routes_map = {"/favicon.ico": lambda _: return None}
 
     def compose_response(
         self,
@@ -70,20 +68,23 @@ class App:
         return f"HTTP/1.1 {str(status_code)} {status_message}\nServer: {self.hostname}\nConnection: close \nAccess-Control-Allow-Origin: *\nContent-Length: {content_length}\n\n{str(response)}"
 
     def main_loop(self):
+        
         print(f"listening on: http://{self.ip}")
         print("registered endpoints:")
+        
         for i in self.routes_map:
             print(f"\thttp://{self.ip}{i}")
 
         while True:
             try:
+
                 cl, _ = self.socket.accept()
                 self.__redirect(cl)
 
-                cl.close()
             except OSError as e:
-                cl.close()
                 print("connection closed")
+
+            cl.close()
             gc.collect()
 
     def register_endpoint(self, path: str, func: function):
@@ -93,17 +94,19 @@ class App:
 
     def __parse_uri(self, uri: str) -> tuple[str, dict]:
         params_separator = uri.find("?")
+        
         if params_separator == -1:
             return uri, {}
 
         path = uri[:params_separator]
+        
         if path[-1] == "/":
             path = path[:-1]
 
-        params = uri[params_separator + 1 :].split("&")
+        params = uri[params_separator + 1:].split("&")
+        
         named_parameters = {}
         
-        print("param parsing:", params)
         for param in params:
             try:
                 key = param.split("=")[0]
@@ -143,5 +146,4 @@ class App:
 
         except Exception as err:
             print("Endpoint error")
-            # error_page(cl, str(err))
             raise err
