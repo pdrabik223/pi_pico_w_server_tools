@@ -1,10 +1,12 @@
-from server.app import App, load_html
+from app import App, load_html
 import socket
 
 app = App(hostname="server_name.local")
 
 def home_page(cl: socket.socket, parameters: dict):
-    cl.sendall(load_html("index.html"))
+    
+    cl.sendall(app.compose_response(response=load_html("static/index.html")))
+
 
 if __name__ == "__main__":
     

@@ -32,9 +32,9 @@ def error_page(cl: socket.socket, message: str = None, stack_trace: dict = None)
     cl.send(page_str)
 
 
-def __favicon(cl: socket.socket, params):
+def __favicon(cl: socket.socket, params:dict):
     try:
-        with open("robot_arm.png", "r") as file:
+        with open("static/ogo_only_squares_orange.png", "r") as file:
             response = file.read()
             print(len(response))
             cl.sendall(
@@ -56,7 +56,7 @@ class App:
         self.socket.listen(1)
 
         # we ignore favicon for now
-        self.routes_map = {"/favicon.ico": lambda _: return None}
+        self.routes_map = {"/favicon.ico": __favicon}
 
     def compose_response(
         self,
