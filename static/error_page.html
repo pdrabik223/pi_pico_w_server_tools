@@ -17,14 +17,20 @@
 
         @media (max-width: 800px) {}
     </style>
+    <script>
+
+        function return_home() {
+            location.href = '/v1'
+        }
+    </script>
 
     <title>Rpi pi pico w</title>
 </head>
 
-<body style="padding: 5% 5%; max-width: 1400px; min-width: 400px; display: flex;  margin: auto;">
-    <H1>Page not found</H1>
-    <p>{{error text}}</p>
-    <button style="width: 100%;">Return home</button>
+<body style="padding: 5% 5%; max-width: 1400px; min-width: 400px;  margin: auto;">
+    <H1>{{headline}}</H1>
+    <p>{{error_text}}</p>
+    <button onclick="return_home()" style="width: 100%;">Return home</button>
 </body>
 
 </html>

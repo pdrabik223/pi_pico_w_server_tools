@@ -18,27 +18,31 @@ def format_dict(target: str, replacement_dict: dict) -> str:
 
     return target
 
-def error_page(cl: socket.socket, message: str = None, stack_trace: dict = None):
+def error_page(cl: socket.socket, headline:str = "Unknown Error", message: str = "No message"):
 
-    page_str = load_html("static/page_404.html")
+    page_str = load_html("static/error_page.html")
     
-    if message == None:
-        message = "No message"
-    if stack_trace == None:
-        stack_trace = "No stack trace"
+    cl.sendall(compose_response(response=format_dict(load_html("static/error_page.html"),{"error_text": message, "headline": headline})))
 
-    page_str = page_str.format(short_message=message, stack_trace=str(stack_trace))
-
-    cl.send(page_str)
+    
+def compose_response(
+    
+    status_code: int = 200,
+    status_message: str = "OK",
+    response: str | None = None,
+) -> str:
+    content_length = str(len(response.encode("utf-8")))
+    return f"HTTP/1.1 {str(status_code)} {status_message}\nConnection: close \nAccess-Control-Allow-Origin: *\nContent-Length: {content_length}\n\n{str(response)}"
 
 
 def __favicon(cl: socket.socket, params:dict):
+    # in the future framework will support sending files
+    return
     try:
-        with open("static/ogo_only_squares_orange.png", "r") as file:
+        with open("static/logo_only_squares_orange.png", "rb") as file:
             response = file.read()
-            print(len(response))
             cl.sendall(
-                f"HTTP/1.1 {str(200)} OK\nServer: {"h.l"}\nConnection: close \nAccess-Control-Allow-Origin: *\n\n{str(response)}"
+                f"HTTP/1.1 {str(200)} OK\nServer: {"h.l"}\nConnection: close \nAccess-Control-Allow-Origin: *\n\n{response}"
             )
     except Exception as ex:
         print(f"icon error type: {type(ex)} error: {str(ex)}")
@@ -58,14 +62,6 @@ class App:
         # we ignore favicon for now
         self.routes_map = {"/favicon.ico": __favicon}
 
-    def compose_response(
-        self,
-        status_code: int = 200,
-        status_message: str = "OK",
-        response: str | None = None,
-    ) -> str:
-        content_length = str(len(response.encode("utf-8")))
-        return f"HTTP/1.1 {str(status_code)} {status_message}\nServer: {self.hostname}\nConnection: close \nAccess-Control-Allow-Origin: *\nContent-Length: {content_length}\n\n{str(response)}"
 
     def main_loop(self):
         
@@ -133,7 +129,7 @@ class App:
 
         if path not in self.routes_map:
             print(f"page: {path} is not in routes_map")
-            error_page(cl, f"404 page: {path} is not in routes_map")
+            error_page(cl, "Page not found error", f"description: page '{path}' not found")
             return
 
         try:
@@ -145,5 +141,7 @@ class App:
             raise err
 
         except Exception as err:
-            print("Endpoint error")
-            raise err
+            print(f"error 500, {str(err)}")
+            error_page(cl, "Internal server error",f"description: {str(err)}")
+   
+   
