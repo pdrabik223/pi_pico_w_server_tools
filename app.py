@@ -1,6 +1,7 @@
 import gc
 import socket
-from wifi_tools import connect_to_wifi
+
+from pi_pico_w_server_tools.wifi_tools import connect_to_wifi
 
 
 def load_html(path_to_html_file: str = "index.html") -> str:
@@ -19,10 +20,7 @@ def format_dict(target: str, replacement_dict: dict) -> str:
     return target
 
 def error_page(cl: socket.socket, headline:str = "Unknown Error", message: str = "No message"):
-
-    page_str = load_html("static/error_page.html")
-    
-    cl.sendall(compose_response(response=format_dict(load_html("static/error_page.html"),{"error_text": message, "headline": headline})))
+    cl.sendall(compose_response(response=format_dict(load_html("pi_pico_w_server_tools/static/error_page.html"),{"error_text": message, "headline": headline})))
 
     
 def compose_response(
@@ -61,7 +59,7 @@ class App:
 
         # we ignore favicon for now
         self.routes_map = {"/favicon.ico": __favicon}
-
+        self.error_page_function = error_page
 
     def main_loop(self):
         
@@ -77,7 +75,7 @@ class App:
                 cl, _ = self.socket.accept()
                 self.__redirect(cl)
 
-            except OSError as e:
+            except OSError:
                 print("connection closed")
 
             cl.close()
@@ -87,6 +85,10 @@ class App:
         if path[-1] == "/":
             path = path[:-1]
         self.routes_map[path] = func
+
+    def register_error_page(self, func:function = error_page):
+        self.error_page_function = func
+        
 
     def __parse_uri(self, uri: str) -> tuple[str, dict]:
         params_separator = uri.find("?")
@@ -145,3 +147,4 @@ class App:
             error_page(cl, "Internal server error",f"description: {str(err)}")
    
    
+    
