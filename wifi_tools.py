@@ -1,3 +1,4 @@
+import requests
 import network
 import json
 import time
@@ -8,8 +9,10 @@ def connect_to_wlan(
 ) -> str:
 
     wlan = network.WLAN(network.STA_IF)
+
     if hostname != None:
-        network.hostname("henderson.local")
+        network.hostname(hostname)
+
     wlan.active(True)
     wlan.connect(ssid, password)
 
@@ -67,10 +70,22 @@ def connect_to_wifi(hostname: str | None = None) -> str:
         print(f"connecting to wifi: '{key}' with password: '{wifi_list[key]}'")
         try:
             ip = connect_to_wlan(key, wifi_list[key], hostname=hostname)
+
+            if check_connection():
+                print("network connected to the internet: OK")
+            else:
+                print("network connected to the internet: FAIL")
+
             save_wifi_info(key, wifi_list[key], wifi_list)
             return ip
+
         except Exception as err:
             print(err)
             continue
 
     raise RuntimeError("network connection failed")
+
+
+def check_connection(url: str = "https://www.google.com/") -> bool:
+    resp = requests.get(url=url, timeout=2)
+    return resp.status_code == 200
