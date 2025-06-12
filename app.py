@@ -1,8 +1,10 @@
 import gc
 import socket
 
-from pi_pico_w_server_tools.wifi_tools import connect_to_wifi
-
+try:
+    from pi_pico_w_server_tools.wifi_tools import connect_to_wifi
+except ImportError:
+    from wifi_tools import connect_to_wifi
 
 def load_html(path_to_html_file: str = "index.html") -> str:
 

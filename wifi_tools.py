@@ -4,79 +4,127 @@ import json
 import time
 
 
-def connect_to_wlan(
-    ssid: str, password: str, retry_attempts: int = 10, hostname: str | None = None
-) -> str:
+class WifiConfiguration:
+    def __init__(self, ssid: str, password: str):
+        self.ssid = ssid
+        self.password = password
 
-    wlan = network.WLAN(network.STA_IF)
+    @staticmethod
+    def from_dict(data: dict) -> "WifiConfiguration":
+        # {
+        #   "default_network": "admin1"
+        # }
+        if len(data) != 1:
+            raise ValueError(
+                "malformed wifi configuration, expected {'<ssid>':'<password>'}, received: ",
+                data,
+            )
 
-    if hostname != None:
-        network.hostname(hostname)
+        ssid = next(iter(data))
+        password = data[ssid]
 
-    wlan.active(True)
-    wlan.connect(ssid, password)
+        return WifiConfiguration(ssid, password)
 
-    while retry_attempts > 0:
-        if wlan.status() < 0 or wlan.status() >= 3:
-            break
-        retry_attempts -= 1
-        print("connecting...")
-        time.sleep(1)
+    def __eq__(self, value):
+        return self.ssid == value.ssid and self.password == value.password
 
-    if wlan.status() != 3:
-        print("connection failed")
-        raise RuntimeError("network connection failed")
+    def __ne__(self, value):
+        return not self.__eq__(value)
 
-    else:
+    def to_dict(self) -> dict:
+        return {self.ssid: self.password}
 
-        status = wlan.ifconfig()
-        print(f"connection succeeded, ip: '{status[0]}' hostname: {network.hostname()}")
+    def connect_to_wlan(
+        self, retry_attempts: int = 10, hostname: str | None = None
+    ) -> str:
 
-        return status[0]
+        wlan = network.WLAN(network.STA_IF)
 
+        if hostname != None:
+            network.hostname(hostname)
 
-def get_wifi_info() -> dict:
-    wifi_config = {}
-    try:
-        with open("wifi_config.json", "r") as file:
-            wifi_config = json.loads(file.read())
-    except Exception as err:
-        print("wifi_config.json file not found")
-        raise Exception("wifi_config.json file not found")
+        wlan.active(True)
+        wlan.connect(self.ssid, self.password)
 
-    return wifi_config
+        while retry_attempts > 0:
+            if wlan.status() < 0 or wlan.status() >= 3:
+                break
+            retry_attempts -= 1
+            print("connecting...")
+            time.sleep(1)
 
+        if wlan.status() != 3:
+            print("connection failed")
+            raise RuntimeError("network connection failed")
 
-def save_wifi_info(ssid, password, wifi_config):
-    if next(iter(wifi_config)) == ssid:
-        return
+        else:
 
-    # FIXME new reconfigured file is not saved to memory
-    new_config = {ssid: password}
-
-    for key in wifi_config.keys():
-        if key != ssid:
-            new_config[key] = wifi_config[key]
-
-    with open("wifi_config.json", "w") as file:
-        file.write(json.dumps(new_config))
-
-
-def connect_to_wifi(hostname: str | None = None) -> str:
-    wifi_list = get_wifi_info()
-    print(f"loaded wifi list: '{wifi_list}'")
-
-    for key in wifi_list.keys():
-        print(f"connecting to wifi: '{key}' with password: '{wifi_list[key]}'")
-        try:
-            ip = connect_to_wlan(key, wifi_list[key], hostname=hostname)
+            status = wlan.ifconfig()
+            print(
+                f"connection succeeded, ip: '{status[0]}' hostname: {network.hostname()}"
+            )
 
             if check_connection():
                 print("network connected to the internet: OK")
             else:
                 print("network connected to the internet: FAIL")
 
-            save_wifi_info(key, wifi_list[key], wifi_list)
+            return status[0]
+
+
+def get_wifi_info() -> list[dict[str, str]]:
+    wifi_config = []
+    # TODO improve error description
+    try:
+        with open("wifi_config.json", "r") as file:
+            wifi_config = json.loads(file.read())
+            print(wifi_config)
+
+    except Exception as err:
+        print("wifi_config.json file error")
+        raise Exception("wifi_config.json file error")
+
+    return wifi_config
+
+
+def save_wifi_info(
+    current_config: WifiConfiguration, wifi_config: list[WifiConfiguration]
+):
+
+    new_config = [current_config.to_dict()]
+
+    for wifi in wifi_config:
+        if wifi != current_config:
+            new_config.append(wifi.to_dict())
+
+    # TODO improve error description
+    try:
+        with open("wifi_config.json", "w") as file:
+            file.write(json.dumps(new_config))
+            file.flush()
+    except Exception as err:
+        print("wifi_config.json file error")
+        raise Exception("wifi_config.json file error")
+
+
+def connect_to_wifi(hostname: str | None = None) -> str:
+    wifi_list = []
+
+    print(f"loaded wifi list: '{wifi_list}'")
+
+    for wifi in get_wifi_info():
+        try:
+            wifi_list.append(WifiConfiguration.from_dict(wifi))
+        except ValueError as err:
+            print(f"wifi configuration error: {str(err)}")
+
+    for config in wifi_list:
+        try:
+            print(f"connecting to wifi: '{config.ssid}', password: '{config.password}'")
+
+            ip = config.connect_to_wlan(hostname=hostname)
+
+            save_wifi_info(config, wifi_list)
             return ip
 
         except Exception as err:
