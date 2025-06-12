@@ -51,7 +51,7 @@ class WifiConfiguration:
             if wlan.status() < 0 or wlan.status() >= 3:
                 print("\t")
                 break
-            
+
             retry_attempts -= 1
             print(".", end="")
             time.sleep(1)
@@ -93,18 +93,26 @@ def save_wifi_info(
     current_config: WifiConfiguration, wifi_config: list[WifiConfiguration]
 ):
 
-    new_config = [current_config.to_dict()]
+    new_config = [current_config]
+    new_config_dict = [current_config.to_dict()]
 
     for wifi in wifi_config:
         if wifi != current_config:
-            new_config.append(wifi.to_dict())
+            new_config.append(wifi)
+            new_config_dict.append(wifi.to_dict())
+
+    if all([new == old for new, old in zip(new_config, wifi_config)]):
+        print("wifi_config is already up to date")
+        return
 
     # TODO improve error description
     try:
+        print("updating wifi_config file")
         with open("wifi_config.json", "w") as file:
-            file.write(json.dumps(new_config))
+            file.write(json.dumps(new_config_dict))
             file.flush()
-    except Exception as err:
+        return
+    except Exception:
         print("wifi_config.json file error")
         raise Exception("wifi_config.json file error")
 
