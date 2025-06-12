@@ -45,24 +45,26 @@ class WifiConfiguration:
 
         wlan.active(True)
         wlan.connect(self.ssid, self.password)
+        print("connecting", end="")
 
         while retry_attempts > 0:
             if wlan.status() < 0 or wlan.status() >= 3:
+                print("\t")
                 break
+            
             retry_attempts -= 1
-            print("connecting...")
+            print(".", end="")
             time.sleep(1)
 
+        # TODO add more info to this error
         if wlan.status() != 3:
-            print("connection failed")
+            print("connection status: FAIL")
             raise RuntimeError("network connection failed")
 
         else:
-
             status = wlan.ifconfig()
-            print(
-                f"connection succeeded, ip: '{status[0]}' hostname: {network.hostname()}"
-            )
+            print("connection status: OK")
+            print(f"ip: '{status[0]}' hostname: {network.hostname()}")
 
             if check_connection():
                 print("network connected to the internet: OK")
@@ -78,7 +80,7 @@ def get_wifi_info() -> list[dict[str, str]]:
     try:
         with open("wifi_config.json", "r") as file:
             wifi_config = json.loads(file.read())
-            print(wifi_config)
+            print(f"loaded wifi config: {wifi_config}")
 
     except Exception as err:
         print("wifi_config.json file error")
@@ -110,8 +112,6 @@ def save_wifi_info(
 def connect_to_wifi(hostname: str | None = None) -> str:
     wifi_list = []
 
-    print(f"loaded wifi list: '{wifi_list}'")
-
     for wifi in get_wifi_info():
         try:
             wifi_list.append(WifiConfiguration.from_dict(wifi))
@@ -128,7 +128,7 @@ def connect_to_wifi(hostname: str | None = None) -> str:
             return ip
 
         except Exception as err:
-            print(err)
+            # print(err)
             continue
 
     raise RuntimeError("network connection failed")
