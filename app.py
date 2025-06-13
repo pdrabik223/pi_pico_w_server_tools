@@ -31,9 +31,11 @@ def compose_response(
     status_message: str = "OK",
     response: str | None = None,
 ) -> str:
-    content_length = str(len(response.encode("utf-8")))
-    return f"HTTP/1.1 {str(status_code)} {status_message}\nConnection: close \nAccess-Control-Allow-Origin: *\nContent-Length: {content_length}\n\n{str(response)}"
-
+    resp_headers = f"HTTP/1.1 {str(status_code)} {status_message}\nConnection: close \nAccess-Control-Allow-Origin: *"
+    if response is not None:
+        content_length = str(len(response.encode("utf-8")))
+        resp_headers += f"\nContent-Length: {content_length}\n\n{str(response)}"
+    return resp_headers
 
 def __favicon(cl: socket.socket, params:dict):
     # in the future framework will support sending files
