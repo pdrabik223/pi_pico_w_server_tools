@@ -143,5 +143,11 @@ def connect_to_wifi(hostname: str | None = None) -> str:
 
 
 def check_connection(url: str = "https://www.google.com/") -> bool:
-    resp = requests.get(url=url, timeout=2)
-    return resp.status_code == 200
+
+    try:
+        requests.get(url=url, timeout=2)
+        # we don't care whether response status is 200 
+        return True
+    except Exception as ex:
+        # mainly catching [Errno 110] ETIMEDOUT
+        return False
