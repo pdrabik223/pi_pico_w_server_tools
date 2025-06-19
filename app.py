@@ -29,12 +29,23 @@ def compose_response(
     
     status_code: int = 200,
     status_message: str = "OK",
-    response: str | None = None,
+    response: str | None | bytes = None,
 ) -> str:
     resp_headers = f"HTTP/1.1 {str(status_code)} {status_message}\nConnection: close \nAccess-Control-Allow-Origin: *"
+    
     if response is not None:
-        content_length = str(len(response.encode("utf-8")))
-        resp_headers += f"\nContent-Length: {content_length}\n\n{str(response)}"
+        
+        if type(response) is str:
+            content_length = str(len(response.encode("utf-8")))
+            resp_headers += f"\nContent-Length: {content_length}\n\n{response}"
+        
+        elif type(response) is bytes:
+            content_length = str(len(response))
+            resp_headers += f"\nContent-Length: {content_length}\n\n{response.decode("utf-8")}"
+                
+        else:
+            raise TypeError(f"invalid response type, expected str or bytes received: {type(response)}")
+        
     return resp_headers
 
 def __favicon(cl: socket.socket, params:dict):
@@ -131,9 +142,10 @@ class App:
         
         for param in params:
             try:
-                key = App.__decode_url_manual(param.split("=")[0])
-                value = App.__decode_url_manual(param.split("=")[1])
-                named_parameters[key] = value
+                if param != '':
+                    key = App.__decode_url_manual(param.split("=")[0])
+                    value = App.__decode_url_manual(param.split("=")[1])
+                    named_parameters[key] = value
             except Exception as ex:
                 print(
                     f"param parsing exception: {str(ex)}, param: {param}",
