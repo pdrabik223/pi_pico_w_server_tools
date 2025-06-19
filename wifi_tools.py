@@ -146,8 +146,9 @@ def check_connection(url: str = "https://www.google.com/") -> bool:
 
     try:
         requests.get(url=url, timeout=2)
-        # we don't care whether response status is 200 
+        # we don't care whether response status is 200
         return True
     except Exception as ex:
+        print(f"failed to reach {url}, error: {str(ex)}")
         # mainly catching [Errno 110] ETIMEDOUT
         return False
