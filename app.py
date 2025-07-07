@@ -1,8 +1,10 @@
 import gc
 import socket
 
-from pi_pico_w_server_tools.wifi_tools import connect_to_wifi
-
+try:
+    from pi_pico_w_server_tools.wifi_tools import connect_to_wifi
+except ImportError:
+    from wifi_tools import connect_to_wifi
 
 def load_html(path_to_html_file: str = "index.html") -> str:
 
@@ -27,11 +29,24 @@ def compose_response(
     
     status_code: int = 200,
     status_message: str = "OK",
-    response: str | None = None,
+    response: str | None | bytes = None,
 ) -> str:
-    content_length = str(len(response.encode("utf-8")))
-    return f"HTTP/1.1 {str(status_code)} {status_message}\nConnection: close \nAccess-Control-Allow-Origin: *\nContent-Length: {content_length}\n\n{str(response)}"
-
+    resp_headers = f"HTTP/1.1 {str(status_code)} {status_message}\nConnection: close \nAccess-Control-Allow-Origin: *"
+    
+    if response is not None:
+        
+        if type(response) is str:
+            content_length = str(len(response.encode("utf-8")))
+            resp_headers += f"\nContent-Length: {content_length}\n\n{response}"
+        
+        elif type(response) is bytes:
+            content_length = str(len(response))
+            resp_headers += f"\nContent-Length: {content_length}\n\n{response.decode("utf-8")}"
+                
+        else:
+            raise TypeError(f"invalid response type, expected str or bytes received: {type(response)}")
+        
+    return resp_headers
 
 def __favicon(cl: socket.socket, params:dict):
     # in the future framework will support sending files
@@ -97,11 +112,31 @@ class App:
     def register_error_page(self, func:function = error_page):
         self.error_page_function = func
         
-
+    @staticmethod
+    def __decode_url_manual(encoded_string):
+        decoded_bytes = bytearray()
+        i = 0
+        while i < len(encoded_string):
+            if encoded_string[i] == '%':
+                hex_pair = encoded_string[i+1:i+3]
+                byte_value = int(hex_pair, 16)
+                decoded_bytes.append(byte_value)
+                i += 3 
+            elif encoded_string[i] == '+':
+                decoded_bytes.append(ord(" "))
+                i += 1
+            else:
+                decoded_bytes.append(ord(encoded_string[i]))
+                i += 1
+        
+        return decoded_bytes.decode('utf-8')
+    
     def __parse_uri(self, uri: str) -> tuple[str, dict]:
         params_separator = uri.find("?")
         
         if params_separator == -1:
+            if uri[-1] == "/":
+                uri = uri[:-1]
             return uri, {}
 
         path = uri[:params_separator]
@@ -115,9 +150,10 @@ class App:
         
         for param in params:
             try:
-                key = param.split("=")[0]
-                value = param.split("=")[1]
-                named_parameters[key] = value
+                if param != '':
+                    key = App.__decode_url_manual(param.split("=")[0])
+                    value = App.__decode_url_manual(param.split("=")[1])
+                    named_parameters[key] = value
             except Exception as ex:
                 print(
                     f"param parsing exception: {str(ex)}, param: {param}",
@@ -127,14 +163,13 @@ class App:
 
     def __redirect(self, cl: socket.socket):
 
-        request = cl.recv(1024)
-        begin = str(request).find("GET")
-        referer_str = str(request)[begin:].split("\\n")[0]
-        referer_str = referer_str[3:-10]
-
-        route_str = referer_str.strip()
-
-        path, parameters = self.__parse_uri(route_str)
+        request = cl.recv(1024).decode("utf-8")
+        params = request.split("\n")
+            
+        page = params[0].replace("GET", "")
+        page = page[:page.find("HTTP")].strip()
+    
+        path, parameters = self.__parse_uri(page)
         
 
         if path not in self.routes_map:
