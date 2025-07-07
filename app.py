@@ -61,25 +61,33 @@ class App:
         self.routes_map = {"/favicon.ico": __favicon}
         self.error_page_function = error_page
 
-    def main_loop(self):
-        
+    def display_server_info(self):
         print(f"listening on: http://{self.ip}")
         print("registered endpoints:")
         
         for i in self.routes_map:
             print(f"\thttp://{self.ip}{i}")
 
+    def accept_connection(self):
+        try:
+
+            cl, _ = self.socket.accept()
+            self.__redirect(cl)
+
+        except OSError:
+            print("connection closed")
+
+        cl.close()
+        gc.collect()
+        
+    def main_loop(self):
+
+        self.display_server_info()
+
         while True:
-            try:
+            self.accept_connection()
 
-                cl, _ = self.socket.accept()
-                self.__redirect(cl)
 
-            except OSError:
-                print("connection closed")
-
-            cl.close()
-            gc.collect()
 
     def register_endpoint(self, path: str, func: function):
         if path[-1] == "/":
