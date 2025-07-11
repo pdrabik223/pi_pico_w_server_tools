@@ -135,7 +135,7 @@ class App:
         params_separator = uri.find("?")
         
         if params_separator == -1:
-            if uri[-1] == "/":
+            if len(uri) > 0 and uri[-1] == "/":
                 uri = uri[:-1]
             return uri, {}
 

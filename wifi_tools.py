@@ -136,7 +136,7 @@ def connect_to_wifi(hostname: str | None = None) -> str:
             return ip
 
         except Exception as err:
-            # print(err)
+            print(err)
             continue
 
     raise RuntimeError("network connection failed")
