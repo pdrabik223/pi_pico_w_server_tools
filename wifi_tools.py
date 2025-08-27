@@ -44,6 +44,8 @@ class WifiConfiguration:
             network.hostname(hostname)
 
         wlan.active(True)
+        
+        # got connection exception here once
         wlan.connect(self.ssid, self.password)
         print("connecting", end="")
 
