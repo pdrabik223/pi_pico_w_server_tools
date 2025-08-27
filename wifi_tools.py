@@ -30,7 +30,10 @@ class WifiConfiguration:
 
     def __ne__(self, value):
         return not self.__eq__(value)
-
+    
+    def __str__(self) -> str:
+        return f"{self.ssid} {self.password}"
+    
     def to_dict(self) -> dict:
         return {self.ssid: self.password}
 
@@ -76,7 +79,7 @@ class WifiConfiguration:
             return status[0]
 
 
-def get_wifi_info() -> list[dict[str, str]]:
+def get_wifi_info() -> list[WifiConfiguration]:
     wifi_config = []
     # TODO improve error description
     try:
@@ -88,7 +91,12 @@ def get_wifi_info() -> list[dict[str, str]]:
         print("wifi_config.json file error")
         raise Exception("wifi_config.json file error")
 
-    return wifi_config
+    try:
+        wifi_list = [WifiConfiguration.from_dict(wifi) for wifi in wifi_config]
+    except ValueError as err:
+        print(f"wifi configuration error: {str(err)}")
+            
+    return wifi_list
 
 
 def save_wifi_info(
@@ -119,14 +127,8 @@ def save_wifi_info(
         raise Exception("wifi_config.json file error")
 
 
-def connect_to_wifi(hostname: str | None = None) -> str:
-    wifi_list = []
-
-    for wifi in get_wifi_info():
-        try:
-            wifi_list.append(WifiConfiguration.from_dict(wifi))
-        except ValueError as err:
-            print(f"wifi configuration error: {str(err)}")
+def connect_to_wifi(hostname: str | None = None) -> tuple[str, WifiConfiguration]:
+    wifi_list = get_wifi_info()
 
     for config in wifi_list:
         try:
@@ -135,7 +137,7 @@ def connect_to_wifi(hostname: str | None = None) -> str:
             ip = config.connect_to_wlan(hostname=hostname)
 
             save_wifi_info(config, wifi_list)
-            return ip
+            return ip, config
 
         except Exception as err:
             print(err)

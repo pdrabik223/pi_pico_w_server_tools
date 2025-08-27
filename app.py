@@ -65,7 +65,7 @@ class App:
 
     def __init__(self, hostname: str | None = None):
         self.hostname = hostname
-        self.ip = connect_to_wifi(hostname=self.hostname)
+        self.ip, self.wifi_config = connect_to_wifi(hostname=self.hostname)
         addr = socket.getaddrinfo("0.0.0.0", 80)[0][-1]
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
