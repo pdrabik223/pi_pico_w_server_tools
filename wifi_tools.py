@@ -98,6 +98,31 @@ def get_wifi_info() -> list[WifiConfiguration]:
             
     return wifi_list
 
+def add_network_configuration(new_network: WifiConfiguration):
+    save_wifi_info(new_network, get_wifi_info())
+
+def forget_network_configuration(ssid: str):
+    config_list = get_wifi_info()
+    
+    new_config_dict = []
+    update_file = False
+    
+    for config in config_list:
+        if config.ssid != ssid:
+            new_config_dict.append(config.to_dict())
+        else: 
+            update_file = True
+               
+    if update_file:
+        try:
+            print("updating wifi_config file")
+            with open("wifi_config.json", "w") as file:
+                file.write(json.dumps(new_config_dict))
+                file.flush()
+            return
+        except Exception:
+            print("wifi_config.json file error")
+            raise Exception("wifi_config.json file error")
 
 def save_wifi_info(
     current_config: WifiConfiguration, wifi_config: list[WifiConfiguration]
