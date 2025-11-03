@@ -30,7 +30,10 @@ class WifiConfiguration:
 
     def __ne__(self, value):
         return not self.__eq__(value)
-
+    
+    def __str__(self) -> str:
+        return f"{self.ssid} {self.password}"
+    
     def to_dict(self) -> dict:
         return {self.ssid: self.password}
 
@@ -44,6 +47,8 @@ class WifiConfiguration:
             network.hostname(hostname)
 
         wlan.active(True)
+        
+        # got connection exception here once
         wlan.connect(self.ssid, self.password)
         print("connecting", end="")
 
@@ -74,7 +79,7 @@ class WifiConfiguration:
             return status[0]
 
 
-def get_wifi_info() -> list[dict[str, str]]:
+def get_wifi_info() -> list[WifiConfiguration]:
     wifi_config = []
     # TODO improve error description
     try:
@@ -86,8 +91,38 @@ def get_wifi_info() -> list[dict[str, str]]:
         print("wifi_config.json file error")
         raise Exception("wifi_config.json file error")
 
-    return wifi_config
+    try:
+        wifi_list = [WifiConfiguration.from_dict(wifi) for wifi in wifi_config]
+    except ValueError as err:
+        print(f"wifi configuration error: {str(err)}")
+            
+    return wifi_list
 
+def add_network_configuration(new_network: WifiConfiguration):
+    save_wifi_info(new_network, get_wifi_info())
+
+def forget_network_configuration(ssid: str):
+    config_list = get_wifi_info()
+    
+    new_config_dict = []
+    update_file = False
+    
+    for config in config_list:
+        if config.ssid != ssid:
+            new_config_dict.append(config.to_dict())
+        else: 
+            update_file = True
+               
+    if update_file:
+        try:
+            print("updating wifi_config file")
+            with open("wifi_config.json", "w") as file:
+                file.write(json.dumps(new_config_dict))
+                file.flush()
+            return
+        except Exception:
+            print("wifi_config.json file error")
+            raise Exception("wifi_config.json file error")
 
 def save_wifi_info(
     current_config: WifiConfiguration, wifi_config: list[WifiConfiguration]
@@ -117,14 +152,8 @@ def save_wifi_info(
         raise Exception("wifi_config.json file error")
 
 
-def connect_to_wifi(hostname: str | None = None) -> str:
-    wifi_list = []
-
-    for wifi in get_wifi_info():
-        try:
-            wifi_list.append(WifiConfiguration.from_dict(wifi))
-        except ValueError as err:
-            print(f"wifi configuration error: {str(err)}")
+def connect_to_wifi(hostname: str | None = None) -> tuple[str, WifiConfiguration]:
+    wifi_list = get_wifi_info()
 
     for config in wifi_list:
         try:
@@ -133,10 +162,10 @@ def connect_to_wifi(hostname: str | None = None) -> str:
             ip = config.connect_to_wlan(hostname=hostname)
 
             save_wifi_info(config, wifi_list)
-            return ip
+            return ip, config
 
         except Exception as err:
-            # print(err)
+            print(err)
             continue
 
     raise RuntimeError("network connection failed")
