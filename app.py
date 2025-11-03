@@ -92,7 +92,7 @@ class App:
         except OSError:
             print("connection closed")
 
-        cl.close()
+        
         gc.collect()
         
     def main_loop(self):
