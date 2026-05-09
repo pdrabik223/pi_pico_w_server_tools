@@ -31,7 +31,7 @@ def compose_response(
     status_message: str = "OK",
     response: str | None | bytes = None,
 ) -> str:
-    resp_headers = f"HTTP/1.1 {str(status_code)} {status_message}\nConnection: close \nAccess-Control-Allow-Origin: *"
+    resp_headers = f"HTTP/1.1 {str(status_code)} {status_message} \r\nConnection: close"
     
     if response is not None:
         
@@ -45,7 +45,9 @@ def compose_response(
                 
         else:
             raise TypeError(f"invalid response type, expected str or bytes received: {type(response)}")
-        
+    
+    resp_headers += f"\nContent-Length: {2}\n\n{'ok'}"
+    
     return resp_headers
 
 def __favicon(cl: socket.socket, params:dict):
