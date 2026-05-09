@@ -4,10 +4,20 @@ import json
 import time
 
 
+
 class WifiConfiguration:
+    DEFAULT_SSID = "default_network"
+    DEFAULT_PASSWORD = "admin1"
+
     def __init__(self, ssid: str, password: str):
         self.ssid = ssid
         self.password = password
+
+    @staticmethod
+    def default_configuration() -> "WifiConfiguration":
+        return WifiConfiguration(
+            WifiConfiguration.DEFAULT_SSID, WifiConfiguration.DEFAULT_PASSWORD
+        )
 
     @staticmethod
     def from_dict(data: dict) -> "WifiConfiguration":
@@ -30,10 +40,10 @@ class WifiConfiguration:
 
     def __ne__(self, value):
         return not self.__eq__(value)
-    
+
     def __str__(self) -> str:
         return f"{self.ssid} {self.password}"
-    
+
     def to_dict(self) -> dict:
         return {self.ssid: self.password}
 
@@ -47,7 +57,7 @@ class WifiConfiguration:
             network.hostname(hostname)
 
         wlan.active(True)
-        
+
         # got connection exception here once
         wlan.connect(self.ssid, self.password)
         print("connecting", end="")
@@ -88,31 +98,33 @@ def get_wifi_info() -> list[WifiConfiguration]:
             print(f"loaded wifi config: {wifi_config}")
 
     except Exception as err:
-        print("wifi_config.json file error")
-        raise Exception("wifi_config.json file error")
+        print("wifi_config.json file error, returning default configuration")
+        return [WifiConfiguration.default_configuration()]
 
     try:
         wifi_list = [WifiConfiguration.from_dict(wifi) for wifi in wifi_config]
     except ValueError as err:
         print(f"wifi configuration error: {str(err)}")
-            
+
     return wifi_list
+
 
 def add_network_configuration(new_network: WifiConfiguration):
     save_wifi_info(new_network, get_wifi_info())
 
+
 def forget_network_configuration(ssid: str):
     config_list = get_wifi_info()
-    
+
     new_config_dict = []
     update_file = False
-    
+
     for config in config_list:
         if config.ssid != ssid:
             new_config_dict.append(config.to_dict())
-        else: 
+        else:
             update_file = True
-               
+
     if update_file:
         try:
             print("updating wifi_config file")
@@ -123,6 +135,7 @@ def forget_network_configuration(ssid: str):
         except Exception:
             print("wifi_config.json file error")
             raise Exception("wifi_config.json file error")
+
 
 def save_wifi_info(
     current_config: WifiConfiguration, wifi_config: list[WifiConfiguration]

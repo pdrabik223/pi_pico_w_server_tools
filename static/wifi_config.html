@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="UTF-8">
+
+    <title>Manage wifi list</title>
+    <style>
+        body {
+            padding: 1rem;
+        }
+
+        #content {
+            margin: auto;
+            /* background-color: red; */
+            max-width: 800px;
+        }
+    </style>
+</head>
+
+<script>
+    function update_btn(id, html, isLoading) {
+        document.getElementById(id).setAttribute('aria-busy', `${isLoading}`);
+        document.getElementById(id).innerHTML = html
+    }
+
+    async function delete_wifi(ssid) {
+        update_btn(`delete_${ssid}_button`, "", true)
+
+        try {
+            const resp = await fetch(`/v1/delete_wifi?ssid=${ssid}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+            })
+            if (!resp.ok) {
+                console.log(`Response status: ${response.status}`)
+                update_btn(`delete_${ssid}_button`, "!", false)
+            } else {
+                get_wifi_list()
+            }
+        } catch (error) {
+            console.error(error.message);
+            update_btn(`delete_${ssid}_button`, "!", false)
+        }
+
+    }
+
+    async function add_wifi() {
+        let ssid = document.getElementById('ssid_input').value;
+        let password = document.getElementById('password_input').value;
+        update_btn(`input_button`, "", true)
+
+        if (typeof ssid !== "string") {
+            update_btn(`input_button`, "!", false)
+            return
+        }
+        ssid = ssid.trim()
+        if (ssid === "") {
+            update_btn(`input_button`, "!", false)
+            return
+        }
+
+        if (typeof password !== "string") {
+            update_btn(`input_button`, "!", false)
+            return
+        }
+        password = password.trim()
+        if (password === "") {
+            update_btn(`input_button`, "!", false)
+            return
+        }
+
+
+        try {
+            const resp = await fetch(`/v1/add_wifi?ssid=${ssid}&password=${password}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+            })
+
+            if (!resp.ok) {
+                console.log(`Response status: ${response.status}`)
+                update_btn(`input_button`, "!", false)
+            } else {
+                get_wifi_list()
+                update_btn(`input_button`, "+", false)
+            }
+        } catch (error) {
+            console.error(error.message);
+            update_btn(`input_button`, "!", false)
+        }
+
+    }
+    async function get_wifi_list() {
+        const table = document.getElementById('wifi_list');
+        try {
+            const resp = await fetch(`/v1/get_wifi_list`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+            })
+
+            if (!resp.ok) {
+                console.log(`Response status: ${resp.status}`)
+                document.getElementById('wifi_list').innerHTML = '<p>Error loading WiFi list</p>'
+            } else {
+                const row = table.rows[1];
+                while (table.rows.length > 2) {
+                    table.deleteRow(2);
+                }
+
+                for (const [network, info] of Object.entries(await resp.json())) {
+                    const newRow = document.createElement("tr");
+
+                    const btn = `<button class="secondary action-button" 'aria-busy'="false" id="delete_${network}_button" onclick="delete_wifi('${network}')">✕</button>`;
+
+                    newRow.innerHTML = `
+                        <tr>
+                            <td>${network} ${info["isConnected"] ? "*" : ""}</td>
+                            <td>${info["password"]}</td>
+                            <td>${info["isDefault"] ? "" : btn}</td>
+                        </tr>
+                    `;
+
+                    row.parentNode.insertBefore(newRow, row.nextSibling);
+                }
+            }
+
+        } catch (error) {
+            console.error(error.message);
+        }
+    }
+
+    window.addEventListener('load', get_wifi_list);
+
+</script>
+
+<body>
+    <div id="content">
+        <H1>Rpi pi pico wifi config</H1>
+        <p>Reset board to reconnect with different network and restart the server</p>
+        <button onclick="() => {location.href = '/v1'}" style="width: 25%;">Return home</button>
+        <table id="wifi_list">
+            <thead>
+                <tr>
+                    <th>SSID</th>
+                    <th>Password</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tr>
+                <td>
+                    <input type="text" id="ssid_input" name="SSID" placeholder="SSID">
+                </td>
+                <td>
+                    <input type="text" id="password_input" name="Password" placeholder="Password">
+                </td>
+                <td>
+                    <button class="secondary action-button" id="input_button" aria-busy="false"
+                        onclick="add_wifi()">+</button>
+                </td>
+            </tr>
+            <tbody>
+
+            </tbody>
+
+        </table>
+
+
+    </div>
+</body>
+
+</html>

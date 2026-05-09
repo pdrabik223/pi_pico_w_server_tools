@@ -1,10 +1,11 @@
 import gc
+import json
 import socket
 
 try:
-    from pi_pico_w_server_tools.wifi_tools import connect_to_wifi
+    from pi_pico_w_server_tools.wifi_tools import connect_to_wifi, get_wifi_info, forget_network_configuration, add_network_configuration, WifiConfiguration
 except ImportError:
-    from wifi_tools import connect_to_wifi
+    from wifi_tools import connect_to_wifi, get_wifi_info, forget_network_configuration, add_network_configuration, WifiConfiguration
 
 def load_html(path_to_html_file: str = "index.html") -> str:
 
@@ -46,7 +47,7 @@ def compose_response(
         else:
             raise TypeError(f"invalid response type, expected str or bytes received: {type(response)}")
     
-    resp_headers += f"\nContent-Length: {2}\n\n{'ok'}"
+    resp_headers += f"\nContent-Length: {len(status_message)}\n\n{status_message}"
     
     return resp_headers
 
@@ -62,11 +63,44 @@ def __favicon(cl: socket.socket, params:dict):
     except Exception as ex:
         print(f"icon error type: {type(ex)} error: {str(ex)}")
 
+def home_page(cl: socket.socket, parameters: dict):
+    cl.sendall(compose_response(response=load_html("pi_pico_w_server_tools/static/index.html")))
+
+def wifi_config_page(cl: socket.socket, parameters: dict):
+    cl.sendall(compose_response(response=load_html("pi_pico_w_server_tools/static/wifi_config.html")))
+
+def delete_wifi(cl: socket.socket, parameters: dict):
+    forget_network_configuration(parameters["ssid"])
+    cl.sendall(compose_response())
+
+def add_wifi(cl: socket.socket, parameters: dict):
+    add_network_configuration(
+        WifiConfiguration(parameters["ssid"], parameters["password"])
+    )
+    cl.sendall(compose_response())
+
+def get_wifi_list(cl: socket.socket, parameters: dict, config: WifiConfiguration):
+
+    wifi_list = get_wifi_info()
+    response = {}
+
+    for wifi in wifi_list:
+        response[wifi.ssid] = {
+            "password": wifi.password,
+            "isConnected": wifi.ssid == config.ssid and wifi.password == config.password,
+            "isDefault": wifi.ssid == WifiConfiguration.DEFAULT_SSID,
+        }
+
+    cl.sendall(compose_response(response=json.dumps(response)))
+
 
 class App:
 
     def __init__(self, hostname: str | None = None):
         self.hostname = hostname
+        self.open_connection()
+
+    def open_connection(self):
         self.ip, self.wifi_config = connect_to_wifi(hostname=self.hostname)
         addr = socket.getaddrinfo("0.0.0.0", 80)[0][-1]
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -75,9 +109,15 @@ class App:
         self.socket.listen(1)
 
         # we ignore favicon for now
-        self.routes_map = {"/favicon.ico": __favicon}
+        self.routes_map = { "/favicon.ico": __favicon,
+                            "/v1": home_page,
+                            "/v1/get_wifi_list": lambda cl, params : get_wifi_list(cl, params, self.wifi_config),
+                            "/v1/wifi_config": wifi_config_page,
+                            "/v1/delete_wifi": delete_wifi,
+                            "/v1/add_wifi": add_wifi}
+        
         self.error_page_function = error_page
-
+    
     def display_server_info(self):
         print(f"listening on: http://{self.ip}")
         print("registered endpoints:")
@@ -192,4 +232,5 @@ class App:
             error_page(cl, "Internal server error",f"description: {str(err)}")
    
    
-    
+
+
