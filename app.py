@@ -1,5 +1,6 @@
 import gc
 import json
+import utime
 import socket
 
 try:
@@ -117,7 +118,25 @@ class App:
                             "/v1/add_wifi": add_wifi}
         
         self.error_page_function = error_page
+        
+    def set_server_start_timestamp(self):
+        self.server_start_time = utime.localtime()
     
+    def get_server_time(self):
+        """
+        The format of the entries in the 8-tuple are:
+        
+        year includes the century (for example 2014).
+        month is 1-12
+        mday is 1-31
+        hour is 0-23
+        minute is 0-59
+        second is 0-59
+        weekday is 0-6 for Mon-Sun
+        yearday is 1-366
+        """
+        return utime.localtime()
+        
     def display_server_info(self):
         print(f"listening on: http://{self.ip}")
         print("registered endpoints:")
@@ -138,7 +157,7 @@ class App:
         gc.collect()
         
     def main_loop(self):
-
+        self.set_server_start_timestamp()
         self.display_server_info()
 
         while True:
