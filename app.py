@@ -74,6 +74,9 @@ def delete_wifi(cl: socket.socket, parameters: dict):
     forget_network_configuration(parameters["ssid"])
     cl.sendall(compose_response())
 
+def status(cl: socket.socket, parameters: dict):
+    cl.sendall(compose_response())
+
 def add_wifi(cl: socket.socket, parameters: dict):
     add_network_configuration(
         WifiConfiguration(parameters["ssid"], parameters["password"])
@@ -115,7 +118,9 @@ class App:
                             "/v1/get_wifi_list": lambda cl, params : get_wifi_list(cl, params, self.wifi_config),
                             "/v1/wifi_config": wifi_config_page,
                             "/v1/delete_wifi": delete_wifi,
-                            "/v1/add_wifi": add_wifi}
+                            "/v1/add_wifi": add_wifi,
+                            "/v1/status": status
+                            }
         
         self.error_page_function = error_page
         
