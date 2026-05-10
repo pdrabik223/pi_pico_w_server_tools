@@ -65,7 +65,7 @@ def __favicon(cl: socket.socket, params:dict):
         print(f"icon error type: {type(ex)} error: {str(ex)}")
 
 def home_page(cl: socket.socket, parameters: dict):
-    cl.sendall(compose_response(response=load_html("pi_pico_w_server_tools/static/index.html")))
+    cl.sendall(compose_response(response=format_dict(load_html("pi_pico_w_server_tools/static/index.html"), {"page_name": "Home Page"})))
 
 def wifi_config_page(cl: socket.socket, parameters: dict):
     cl.sendall(compose_response(response=load_html("pi_pico_w_server_tools/static/wifi_config.html")))
