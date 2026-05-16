@@ -75,5 +75,9 @@ def home_page(cl: socket.socket, parameters: dict):
 ## TODO
 
 - [ ] Add connection monitoring and restoring
-- [ ] Optionally require that the network has an internet connection
+- [ ] Optionally require that the network has an internet connection - tested with ping to google.com
 - [ ] Create a request wrapper to catch network errors, retry connections, and resend requests
+- [ ] Add request ID support
+- [ ] Integrate option for remote http and js hosting. Pico simply points to remotely hosted js web app, and runs script in local network. No shure if it will work  
+- [ ] request param validation support
+- [ ] support for post requests
