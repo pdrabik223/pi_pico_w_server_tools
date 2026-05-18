@@ -88,16 +88,17 @@ def compose_response(
         
         if type(response) is str:
             content_length = str(len(response.encode("utf-8")))
-            resp_headers += f"\nContent-Length: {content_length}\n\n{response}"
+            resp_headers += f"\nContent-Length: {content_length}\r\n\n{response}"
         
         elif type(response) is bytes:
             content_length = str(len(response))
-            resp_headers += f"\nContent-Length: {content_length}\n\n{response.decode("utf-8")}"
+            resp_headers += f"\nContent-Length: {content_length}\r\n\n{response.decode("utf-8")}"
                 
         else:
             raise TypeError(f"invalid response type, expected str or bytes received: {type(response)}")
-    
-    resp_headers += f"\nContent-Length: {len(HTTP_STATUS_CODES[status_code])}\n\n{HTTP_STATUS_CODES[status_code]}"
+    else:
+        resp_headers += f"\r\nContent-Length: {len(HTTP_STATUS_CODES[status_code])}\r\n\n{HTTP_STATUS_CODES[status_code]}"
+
     
     return resp_headers
 
