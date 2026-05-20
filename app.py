@@ -79,27 +79,32 @@ def error_page(cl: socket.socket, headline:str = "Unknown Error", message: str =
 def compose_response(
     status_code: int = 200,
     response: str | None | bytes = None,
+    content_type: str = "application/plain"
+    
 ) -> str:
     
 
-    resp_headers = f"HTTP/1.1 {str(status_code)} {HTTP_STATUS_CODES[status_code]} \r\nConnection: close"
+    resp_headers = f"HTTP/1.1 {str(status_code)} {HTTP_STATUS_CODES[status_code]}\r\nConnection: close\r\nContent-Type: {content_type}"
     
-    if response is not None:
-        
-        if type(response) is str:
-            content_length = str(len(response.encode("utf-8")))
-            resp_headers += f"\nContent-Length: {content_length}\r\n\n{response}"
-        
-        elif type(response) is bytes:
-            content_length = str(len(response))
-            resp_headers += f"\nContent-Length: {content_length}\r\n\n{response.decode("utf-8")}"
-                
-        else:
-            raise TypeError(f"invalid response type, expected str or bytes received: {type(response)}")
-    else:
-        resp_headers += f"\r\nContent-Length: {len(HTTP_STATUS_CODES[status_code])}\r\n\n{HTTP_STATUS_CODES[status_code]}"
+    resp = "" 
+    
+    if response is None:
+        resp = {'message':HTTP_STATUS_CODES[status_code], 'status': status_code}
+        resp = json.dumps(resp)
+    else: 
+        resp = response
+    
+    if type(resp) is str:
+        content_length = str(len(resp.encode("utf-8")))
+        resp_headers += f"\r\nContent-Length: {content_length}\r\n\r\n{resp}"
+    
+    elif type(resp) is bytes:
+        content_length = str(len(resp))
+        resp_headers += f"\r\nContent-Length: {content_length}\r\n\r\n{resp.decode("utf-8")}"
 
-    
+    else:
+        raise TypeError(f"invalid response type, expected str or bytes received: {type(resp)}")
+       
     return resp_headers
 
 def __favicon(cl: socket.socket, params:dict):
@@ -115,10 +120,10 @@ def __favicon(cl: socket.socket, params:dict):
         print(f"icon error type: {type(ex)} error: {str(ex)}")
 
 def home_page(cl: socket.socket, parameters: dict):
-    cl.sendall(compose_response(response=format_dict(load_html("pi_pico_w_server_tools/static/index.html"), {"page_name": "Home Page"})))
+    cl.sendall(compose_response(response=format_dict(load_html("pi_pico_w_server_tools/static/index.html"), {"page_name": "Home Page"}),content_type="text/html; charset=utf-8"))
 
 def wifi_config_page(cl: socket.socket, parameters: dict):
-    cl.sendall(compose_response(response=load_html("pi_pico_w_server_tools/static/wifi_config.html")))
+    cl.sendall(compose_response(response=load_html("pi_pico_w_server_tools/static/wifi_config.html"),content_type="text/html; charset=utf-8"))
 
 def delete_wifi(cl: socket.socket, parameters: dict):
     forget_network_configuration(parameters["ssid"])
